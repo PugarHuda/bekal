@@ -12,7 +12,7 @@ Not submitted yet. Fields to paste when the author decides to submit (deadline 2
 
 **Tags:** Crypto / Web3 → Education, Privacy, ZK, Social; L1 Ethereum; L2 Base; Ethereum Attestation Service
 
-**Links:** Website https://bekal-three.vercel.app (the working prototype). The Idea Track does not require one, but it shows the idea works. Optional: the author's X and LinkedIn, as on BUIDL 50178.
+**Links:** Website https://bekal-three.vercel.app (the working prototype) · GitHub Repo https://github.com/PugarHuda/bekal. The Idea Track does not require one, but it shows the idea works. Optional: the author's X and LinkedIn, as on BUIDL 50178.
 
 **Description:** the whole of [`PROPOSAL.md`](PROPOSAL.md) below its title. DoraHacks' editor (Lexical) shows Markdown as plain text when pasted; paste it as rendered HTML (open the file in a Markdown preview and copy from there), or format headings and bold with the toolbar.
 

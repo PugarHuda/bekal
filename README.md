@@ -4,7 +4,7 @@ Learning records refugees carry themselves. An idea for the **Idea Track** of *F
 
 *Bekal* is Indonesian for the provisions you take on a journey: here, proof of what a refugee has learned, held by the learner, checkable by any school, scholarship or employer, and never written to a blockchain about them.
 
-**Live prototype:** https://bekal-three.vercel.app (Base Sepolia, a test network) · **Proposal:** [`docs/PROPOSAL.md`](docs/PROPOSAL.md) · **DoraHacks fields:** [`docs/SUBMISSION.md`](docs/SUBMISSION.md)
+**Live prototype:** https://bekal-three.vercel.app (Base Sepolia, a test network) · **Source:** https://github.com/PugarHuda/bekal · **Proposal:** [`docs/PROPOSAL.md`](docs/PROPOSAL.md) · **DoraHacks fields:** [`docs/SUBMISSION.md`](docs/SUBMISSION.md)
 
 ## Try it
 
