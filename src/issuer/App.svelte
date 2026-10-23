@@ -28,17 +28,27 @@
     let msg = $state("")
     let busy = $state(false)
 
+    // Switching centre while the registry is still answering for the previous one must not let that answer land on
+    // this one: only the latest load may write.
+    let loads = 0
     async function load() {
-        key = mode === "demo" ? config.demoIssuer.privateKey : await keyFor("issuerKey", newKey)
-        issued = (await get<Issued[]>(`issued:${new Wallet(key).address}`)) ?? []
+        const mine = ++loads
         recognition = "Checking the public registry…"
         recognised = false
+        const k = mode === "demo" ? config.demoIssuer.privateKey : await keyFor("issuerKey", newKey)
+        if (mine !== loads) return
+        key = k
+        const who = new Wallet(k).address
+        const list = (await get<Issued[]>(`issued:${who}`)) ?? []
+        if (mine !== loads) return
+        issued = list
         try {
-            const r = await registry.recognition(new Wallet(key).address)
+            const r = await registry.recognition(who)
+            if (mine !== loads) return
             recognised = r.recognised
             recognition = r.recognised ? `Recognised: ${r.name}, ${r.place}. Vouched for by ${r.by}.` : `Not recognised: ${r.reason}. Records from this key will verify as signed, but not as from a recognised centre.`
         } catch (e) {
-            recognition = `The registry could not be read right now (${(e as Error).message}).`
+            if (mine === loads) recognition = `The registry could not be read right now (${(e as Error).message}).`
         }
     }
     onMount(load)
