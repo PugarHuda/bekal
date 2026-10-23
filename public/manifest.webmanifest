@@ -1,0 +1,1 @@
+{ "name": "Bekal wallet", "short_name": "Bekal", "start_url": "/wallet", "display": "standalone", "background_color": "#f4efe6", "theme_color": "#1f3a5f", "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }] }

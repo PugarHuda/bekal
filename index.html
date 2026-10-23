@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bekal | Learning records refugees carry themselves</title>
+<meta name="description" content="Refugee learners hold their own verifiable record of what they learned, checkable by any school, scholarship or employer, even after the centre closes, with nothing about them on a blockchain." />
+<link rel="icon" href="/logo.svg" type="image/svg+xml" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#1f3a5f" />
+<meta property="og:title" content="Bekal: learning records refugees carry themselves" />
+<meta property="og:description" content="Verifiable learning records for refugees, held by the learner, checkable by anyone." />
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><img src="/logo.svg" alt="" width="28" height="28" />BEKAL</a><nav><a href="/issuer">Centre</a><a href="/wallet">Wallet</a><a href="/verify">Verify</a></nav></header>
+<main>
+  <h1>Learning records refugees carry themselves</h1>
+  <p class="lead"><i>Bekal</i> is Indonesian for the provisions you take on a journey. Refugee children in Malaysia cannot attend public schools, so they learn in community learning centres whose paper records are lost when a family moves, a centre closes, or a family is resettled. Bekal gives the learner a signed record of what they learned that they keep on their phone or on paper, show only as much of as they choose, and that any school, scholarship or employer can check, even years later and even if the centre is gone.</p>
+
+  <section class="card">
+    <h2>Try it: three steps</h2>
+    <ol>
+      <li><b><a href="/wallet">Open the wallet</a></b> on a phone (or another browser tab). It makes a key on the device and shows <i>My wallet code</i>.</li>
+      <li><b><a href="/issuer">Issue a record</a></b> as the demo learning centre: write what was learned, optionally the learner's name, paste or scan the wallet code, and sign. Scan the resulting code with the phone: the record is now in the wallet.</li>
+      <li>In the wallet, press <b>Show</b>, choose whether to reveal the name, and let someone <b><a href="/verify">check it</a></b>. They see the course, that it is genuine, that the centre is recognised on the public registry, and that the name was kept private.</li>
+    </ol>
+    <p class="fine">Make your own centre on the Centre page to see what an unrecognised key looks like: the signature checks out, the recognition does not.</p>
+  </section>
+
+  <section class="card">
+    <h2>What is on the blockchain, and what is not</h2>
+    <ul>
+      <li><b>On-chain (Ethereum Attestation Service, Base Sepolia):</b> which learning centres are recognised, and by whom; and, when a centre withdraws a record, the hash of that record's random id.</li>
+      <li><b>Never on-chain:</b> the learner's name, birth year, nationality, UNHCR number, or even which records exist. Records are SD-JWT verifiable credentials held by the learner.</li>
+      <li><b>Checks:</b> the centre's ES256K signature and every shown claim, the learner's wallet proof (a record bound to a phone can only be shown from it, and a showing expires after 15 minutes), the centre's recognition read from the EAS contract itself, and withdrawals.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Status</h2>
+    <p>A working prototype on a test network, for the Idea Track of <i>From Vision to Impact: Building Web3 for Social Good 2026</i>. The demo centre's key is published on purpose so anyone can try issuing, and it is recognised by the prototype's own test key, which is not an accrediting body. A pilot needs a real recognising body (for example UNHCR's list of recognised learning centres, or a consortium of NGOs) and two or three centres.</p>
+  </section>
+</main>
+<script type="module" src="/src/landing.ts"></script>
+</body>
+</html>

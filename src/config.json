@@ -1,0 +1,30 @@
+{
+  "chainId": 84532,
+  "network": "Base Sepolia",
+  "rpcs": [
+    "https://base-sepolia-rpc.publicnode.com",
+    "https://base-sepolia.gateway.tenderly.co",
+    "https://sepolia.base.org"
+  ],
+  "eas": "0x4200000000000000000000000000000000000021",
+  "graphql": "https://base-sepolia.easscan.org/graphql",
+  "explorer": "https://base-sepolia.easscan.org",
+  "schemas": {
+    "recognition": "0x619eaf3403e283b79bd87baa24bcb7a5ef3bc686ded7e791d653f0a56d4b9965",
+    "revocation": "0xb3659c7ee99f371a3f60f884ddfb8ac1bad5e3016956dba8521da2ea1ae308ac"
+  },
+  "roots": [
+    {
+      "address": "0x6a53607b0F6BD69DDBc08607135164aB81daD948",
+      "label": "Bekal prototype root: a test key, not an accrediting body"
+    }
+  ],
+  "demoIssuer": {
+    "address": "0x155619B23c9D3BAC7c41045bD09A5453F4e432aE",
+    "privateKey": "0x4a9bbeb14bf8c54d55155097ef9e4586d537fdd56da780eae8331662f0b1b225",
+    "name": "Demo Learning Centre (public test key)",
+    "place": "Kuala Lumpur, Malaysia (demo)",
+    "recognitionUid": "0xcb0bba1ace69b2cf601fc3826d487eba9c40f87fc7ee599fb6a78675a86a679d",
+    "note": "Published on purpose so anyone can try issuing; a real centre's key never leaves its browser."
+  }
+}

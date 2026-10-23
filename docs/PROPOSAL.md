@@ -17,23 +17,23 @@ Bekal (Indonesian for "provisions for the journey") gives refugee learners a rec
 ## The proposed solution
 
 1. **A public registry of who may issue.** A learning centre becomes an issuer when a recognised body vouches for it, for example UNHCR's recognition of learning centres or a consortium of NGOs, as an on-chain attestation (Ethereum Attestation Service). Recognition can be revoked, and the full history stays readable.
-2. **Credentials held by the learner, not stored on-chain.** Each credential ("completed Grade 6 mathematics", "English B1", "tailoring level 2") is a W3C Verifiable Credential signed by the centre's key and kept in the learner's phone wallet, which works offline. A printed QR card backs it up. Nothing about the learner (no name, no UNHCR number, no nationality) is written to the blockchain.
-3. **Show only what is needed.** The learner chooses what to reveal. With selective disclosure (SD-JWT VC) or a zero-knowledge proof, they can show "completed Grade 6 at a recognised centre" without their name, nationality or the centre's location; they reveal their name only to a verifier they trust, such as a resettlement school.
+2. **Credentials held by the learner, not stored on-chain.** Each credential ("completed Grade 6 mathematics", "English B1", "tailoring level 2") is a verifiable credential in the IETF SD-JWT VC format, signed by the centre's key and kept in the learner's phone wallet, which works offline. Learners without a phone of their own get it as a printed QR card instead. Nothing about the learner (no name, no UNHCR number, no nationality) is written to the blockchain.
+3. **Show only what is needed.** The learner chooses what to reveal. With selective disclosure (SD-JWT VC), they can show "completed Grade 6 at a recognised centre" without their name or birth year, which the centre signed only as salted hashes; they reveal their name only to a verifier they trust, such as a resettlement school. The centre is always shown: it is what makes the record worth trusting.
 4. **Records that outlive the centre.** Verification needs only the credential and the public registry, so it still works when the centre has closed, its staff have left, or the learner is on another continent. Revocation (a credential issued in error) is a public status list, not a database of people.
-5. **Recovery without a central copy.** If the phone is lost, which is common, the learner recovers from the printed card's recovery code, or the issuing centre re-issues against the learner's own secret, so no one keeps a master list.
+5. **Recovery without a central copy.** If the phone is lost, which is common, the learner restores their wallet from a backup file they keep somewhere safe (a relative's phone, a USB stick), or the centre issues the record again to a new wallet; no one keeps a master list.
 
 ## How Web3 adds meaningful value
 
 - **No single authority to trust or to fear.** The government that persecuted the learner, the host government that does not recognise refugees, and an aid agency's database are all poor holders of this record. A public registry of issuers and their standing needs none of them.
 - **Permanence that informal schools cannot provide.** Many learning centres depend on short-term funding. Their recognition and their signing keys live on a public chain, so their credentials stay checkable after they close.
 - **Verifiable without contacting anyone.** A school in Canada or an online university checks a credential against the chain in seconds, instead of reaching a centre in Kuala Lumpur that may no longer exist.
-- **Tamper-evident and time-stamped.** Issuance batches are anchored on-chain (one Merkle root per term), so a certificate cannot be back-dated or quietly altered, and nothing in the anchor reveals who it is about.
-- **Built on open standards.** W3C Verifiable Credentials, SD-JWT and EAS mean any wallet or verifier can take part, and the system is not locked to one company.
+- **Tamper-evident, and withdrawals are public.** Every claim is covered by the centre's signature, so a changed course or a swapped name fails the check; when a centre withdraws a record, the withdrawal is a permanent public attestation that names only the hash of the record's random id.
+- **Built on open standards.** IETF SD-JWT VC (the format of the EU digital identity wallet) and EAS mean any wallet or verifier can take part, and the system is not locked to one company.
 
 ## What exists, and what is different
 
 - **European Qualifications Passport for Refugees** (Council of Europe): credentials evaluators interview refugees and assess their prior qualifications; about 337 passports had been issued by mid-2019. It recognises past higher education after the fact. Bekal records learning as it happens, in informal centres, including children and non-formal skills.
-- **Blockchain certificate pilots for refugees** (Path Foundation's #BlockchainEducationalPassport, 2018; ODEM with InternetBar.org, 2018; academic designs such as an Ethereum certificate system in IEEE, 2025) put certificates or their hashes on a chain or depend on one platform. Bekal keeps every learner record off-chain and in the learner's hands, anchors only issuers and anonymous batch roots, adds selective disclosure, and works offline with a printed fallback.
+- **Blockchain certificate pilots for refugees** (Path Foundation's #BlockchainEducationalPassport, 2018; ODEM with InternetBar.org, 2018; academic designs such as an Ethereum certificate system in IEEE, 2025) put certificates or their hashes on a chain or depend on one platform. Bekal keeps every learner record off-chain and in the learner's hands, puts only the registry of recognised issuers and anonymous withdrawals on-chain, adds selective disclosure and wallet binding, and works offline with a printed fallback.
 
 ## Potential social impact
 
@@ -46,9 +46,20 @@ Bekal (Indonesian for "provisions for the journey") gives refugee learners a rec
 ## Feasibility and path to a pilot
 
 - **Pilot:** two or three UNHCR-recognised learning centres in Kuala Lumpur, or refugee communities in Medan or Makassar, with one verifier that accepts transfers (another centre).
-- **Cost:** credentials are off-chain and free to issue; registry updates and term anchors cost a fraction of a cent each on an Ethereum layer 2 such as Base.
+- **Cost:** credentials are off-chain and free to issue; registry updates and withdrawals cost a fraction of a cent each on an Ethereum layer 2 such as Base.
 - **Risks and answers:** a fake issuer (only vouched issuers count, and vouching is revocable); coercion to reveal (the learner holds the credential and chooses what to show; there is no database to raid); lost phones (printed card and recovery); legal and ethical review (no personal data on-chain, informed consent at issuance, following the data-minimisation principle of the ICRC Handbook on Data Protection in Humanitarian Action).
-- **Build plan for the prototype phase:** an issuer page for centres (sign and print credentials), a learner wallet that works offline (a phone web app, no install), and a verifier page that scans a QR code and answers "valid, from a recognised centre, not revoked".
+- **Next, in the prototype phase:** field-test the three pages with a real learning centre and its learners (the languages they read, shared phones, printing), and replace the prototype's own recognition key with a real recognising body.
+
+## Working prototype (already built)
+
+Live at https://bekal-three.vercel.app, on Base Sepolia (a test network):
+
+- **Centre page** (`/issuer`): signs a learning record in the browser as an SD-JWT VC (IETF SD-JWT VC, RFC 9901 selective disclosure, the OpenWallet Foundation's library) with an ES256K key; the learner's name and birth year are selectively disclosable; the record is bound to the learner's wallet key, or issued as a printed card. A centre withdraws a record with an EAS attestation.
+- **Learner wallet** (`/wallet`): makes its key on the phone, receives a record by scanning a QR code (a link whose part after # never reaches a server), lets the learner tick what to reveal, and shows a QR code valid for 15 minutes, signed by the wallet. Works offline; backup and restore to a file.
+- **Verifier** (`/verify`): scans a QR code, a photo of one, or a pasted link, and checks the centre's signature and every shown claim, the wallet's proof, the centre's recognition, and withdrawals.
+- **Registry on the Ethereum Attestation Service**: two schemas (a centre's recognition, revocable; a record's withdrawal, permanent). The verifier finds attestations through the EAS indexer and reads each one again from the EAS contract itself, so the indexer can never make a centre look recognised.
+- **A public demo centre** whose key is published so anyone can try the full path, recognised by the prototype's own test key, which says it is not an accrediting body. A centre made on the page shows what an unrecognised key looks like.
+- **Tested:** unit tests for the signatures, disclosures, wallet binding and tampering, tests against the live registry, and Playwright tests of the whole path in a real browser under the production security policy, including a forged record, a withdrawn record, a stolen wallet record, a photo of a QR code, offline use and accessibility.
 
 ## Team
 
