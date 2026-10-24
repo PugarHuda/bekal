@@ -6,6 +6,10 @@
     "https://base-sepolia.gateway.tenderly.co",
     "https://sepolia.base.org"
   ],
+  "logRpcs": [
+    "https://base-sepolia.gateway.tenderly.co"
+  ],
+  "fromBlock": 49075000,
   "eas": "0x4200000000000000000000000000000000000021",
   "graphql": "https://base-sepolia.easscan.org/graphql",
   "explorer": "https://base-sepolia.easscan.org",

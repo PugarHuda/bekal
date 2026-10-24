@@ -43,7 +43,7 @@ describe("learning record (SD-JWT VC)", () => {
         expect(v).toMatchObject({ ok: true, signature: true, revoked: false, bound: true, keyBinding: "valid", issuer: centre.address })
         expect(v.achievement).toEqual(learning)
         expect(v.learner).toEqual({ birthYear: 2013 })
-        expect(v.hidden).toEqual(["1 learner detail"])
+        expect(v.hidden).toBe(1)
         expect(p).not.toMatch(/Nur Aisyah/)
         expect(JSON.stringify(v)).not.toContain("Nur Aisyah")
     })
@@ -83,6 +83,6 @@ describe("learning record (SD-JWT VC)", () => {
     it("reports a revoked record as not valid, with its signature still checking out", async () => {
         const { credential, jti } = await issue({ chainId: CHAIN, issuerKey: centre.privateKey, issuerAddress: centre.address, learning, learner: {} })
         const v = await verify(await present({ chainId: CHAIN, credential, reveal: {} }), registry([jti]))
-        expect(v).toMatchObject({ ok: false, signature: true, revoked: true, hidden: [] })
+        expect(v).toMatchObject({ ok: false, signature: true, revoked: true, hidden: 0 })
     })
 })

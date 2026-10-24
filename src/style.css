@@ -2,7 +2,7 @@
 @media (prefers-color-scheme: dark) { :root { --bg: #0f1620; --card: #17212d; --ink: #edf1f5; --muted: #a7b2bd; --line: #2b3746; --navy: #8fb3e0; --gold: #e8a33d; --ok: #6fd39a; --bad: #ff9b85; --soft: #1d2836 } }
 * { box-sizing: border-box }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif }
-header.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 880px; margin: 0 auto; padding: 14px 16px }
+header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 12px; max-width: 880px; margin: 0 auto; padding: 14px 16px }
 header.top a.brand { font-weight: 800; letter-spacing: .12em; color: var(--navy); text-decoration: none; display: flex; gap: 8px; align-items: center }
 header.top nav { display: flex; gap: 14px; flex-wrap: wrap }
 a { color: var(--navy) }
@@ -35,3 +35,9 @@ ul.checks li { padding: 6px 0; border-bottom: 1px solid var(--line) }
 .list li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line) }
 video { width: min(360px, 100%); border-radius: 12px; background: #000 }
 @media print { header.top, .noprint { display: none } body { background: #fff; color: #000 } .card { border: 1px solid #999 } }
+header.top nav { align-items: center }
+select.lang { width: auto; padding: 6px 8px; font-size: 14px }
+.review { flex-basis: 100%; margin: 0; padding: 6px 10px; border-radius: 8px; font-size: 13px; color: var(--muted); background: var(--soft) }
+.mono, input[type=number], input[type=date] { direction: ltr; unicode-bidi: plaintext }
+.cardtext { margin-top: 10px; line-height: 1.4 }
+.cardtext b { font-size: 18px }

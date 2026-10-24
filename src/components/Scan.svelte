@@ -2,6 +2,7 @@
     // Paste a link, upload a photo of a QR code, or point the camera at one.
     import { onDestroy } from "svelte"
     import { decodeImage, scanCamera } from "../lib/qr.ts"
+    import { t } from "../lib/i18n.svelte.ts"
     let { label, found }: { label: string; found: (text: string) => void } = $props()
     let text = $state("")
     let note = $state("")
@@ -13,18 +14,18 @@
     async function photo(e: Event) {
         const f = (e.target as HTMLInputElement).files?.[0]
         if (!f) return
-        const t = await decodeImage(f)
-        if (t) found(t)
-        else note = "No QR code found in that photo. Try a sharper, closer one."
+        const got = await decodeImage(f)
+        if (got) found(got)
+        else note = t("sNoQr")
     }
     async function camera() {
         note = ""
         scanning = true
         try {
-            stop = await scanCamera(video!, (t) => ((scanning = false), found(t)))
+            stop = await scanCamera(video!, (got) => ((scanning = false), found(got)))
         } catch (e) {
             scanning = false
-            note = `The camera is not available here (${(e as Error).message}). Upload a photo or paste the link instead.`
+            note = t("sNoCamera", { e: (e as Error).message })
         }
     }
     onDestroy(() => stop?.())
@@ -32,11 +33,11 @@
 
 <div class="scan">
     <label for={id}>{label}</label>
-    <textarea id={id} bind:value={text} placeholder="Paste the link or code here"></textarea>
+    <textarea id={id} bind:value={text} placeholder={t("sPaste")}></textarea>
     <div class="actions">
-        <button type="button" onclick={() => found(text)} disabled={!text.trim()}>Use this</button>
-        <button type="button" class="ghost" onclick={camera} disabled={scanning}>Scan with camera</button>
-        <label class="btn ghost" style="margin:0">Upload a photo<input type="file" accept="image/*" onchange={photo} hidden /></label>
+        <button type="button" onclick={() => found(text)} disabled={!text.trim()}>{t("sUse")}</button>
+        <button type="button" class="ghost" onclick={camera} disabled={scanning}>{t("sCamera")}</button>
+        <label class="btn ghost" style="margin:0">{t("sPhoto")}<input type="file" accept="image/*" onchange={photo} hidden /></label>
     </div>
     <video bind:this={video} playsinline muted hidden={!scanning}></video>
     {#if note}<p class="msg" role="status">{note}</p>{/if}

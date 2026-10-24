@@ -23,4 +23,21 @@ describe("issuer registry on EAS (live)", { timeout: 60e3 }, () => {
         const revoked = fs.readFileSync(new URL("./fixtures/revoked.txt", import.meta.url), "utf8")
         expect(await verify(revoked, registry)).toMatchObject({ ok: false, signature: true, revoked: true, learner: { name: "Test Learner" } })
     })
+
+    it("with no RPC that serves wide log ranges, the EAS indexer still finds the recognition and the withdrawal", { timeout: 150e3 }, async () => {
+        const saved = config.logRpcs
+        config.logRpcs = ["https://invalid.example"]
+        try {
+            expect(await registry.recognition(config.demoIssuer.address)).toMatchObject({ recognised: true })
+            const revoked = fs.readFileSync(new URL("./fixtures/revoked.txt", import.meta.url), "utf8")
+            let v = await verify(revoked, registry)
+            for (let i = 0; i < 10 && !v.revoked; i++) { // the indexer trails the chain by up to a minute
+                await new Promise((r) => setTimeout(r, 10e3))
+                v = await verify(revoked, registry)
+            }
+            expect(v).toMatchObject({ revoked: true, ok: false })
+        } finally {
+            config.logRpcs = saved
+        }
+    })
 })

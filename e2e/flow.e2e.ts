@@ -36,6 +36,7 @@ async function issueTo(page: Page, code: string | null, course: string, opts: { 
     }
     await page.getByRole("button", { name: "Sign and issue" }).click()
     await expect(page.getByRole("img", { name: "Learning record QR code" })).toBeVisible()
+    await expect(page.locator("#cardText")).toContainText(course) // what a person reads on the printed card
     return (await page.locator("#credential").textContent())!
 }
 
@@ -66,7 +67,7 @@ test("a centre issues to the learner's wallet; the learner shows it with the nam
     await expect(v.getByRole("heading")).toHaveText("✓ Genuine record from a recognised centre")
     await expect(v).toContainText("Mathematics, Grade 6 · Completed")
     await expect(v).toContainText("Born 2013")
-    await expect(v).toContainText("1 learner detail kept private")
+    await expect(v).toContainText("1 of the learner's details kept private")
     await expect(v).not.toContainText("Nur Aisyah")
     await expect(v).toContainText("✓ Shown from the learner's own wallet, in the last 15 minutes")
     await expect(v).toContainText("✓ Not withdrawn by the centre")
@@ -88,7 +89,7 @@ test.describe(() => {
     await page.goto("/verify")
     await page.locator("input[type=file]").setInputFiles(shot)
     await expect(page.locator("#verdict").getByRole("heading")).toHaveText("✓ Genuine record from a recognised centre")
-    await expect(page.locator("#verdict")).toContainText("2 learner details kept private")
+    await expect(page.locator("#verdict")).toContainText("2 of the learner's details kept private")
     })
 })
 
@@ -153,4 +154,51 @@ test("security headers: the CSP allows only this site, the registry and the publ
         expect(h["content-security-policy"], p).toContain("frame-ancestors 'none'")
         expect(h["referrer-policy"], p).toBe("no-referrer") // a record in a link's fragment never leaks to another site
     }
+})
+
+test("the pages speak Malay, Indonesian, Burmese and Dari (right to left), remembered across visits, and say the translation needs review", async ({ page }) => {
+    await page.goto("/wallet")
+    const lang = page.getByRole("combobox", { name: "Language" })
+    await lang.selectOption("ms")
+    await expect(page.locator("h1")).toHaveText("Rekod pembelajaran saya")
+    await expect(page.locator("html")).toHaveAttribute("lang", "ms")
+    await expect(page.getByRole("note")).toContainText("belum disemak oleh penutur asli")
+    await page.reload()
+    await expect(page.locator("h1")).toHaveText("Rekod pembelajaran saya")
+    await page.getByRole("combobox", { name: "Bahasa" }).selectOption("prs")
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl")
+    await expect(page.locator("h1")).toHaveText("سوابق آموزشی من")
+    await axe(page)
+    await page.goto("/verify")
+    await page.getByRole("combobox").first().selectOption("my")
+    await expect(page.locator("h1")).toHaveText("သင်ယူမှုမှတ်တမ်းကို စစ်ဆေးရန်")
+    await page.getByRole("combobox").first().selectOption("id")
+    await page.getByLabel("Tautan atau kode tunjuk").fill(fs.readFileSync("test/fixtures/revoked.txt", "utf8"))
+    await page.getByRole("button", { name: "Gunakan ini" }).click()
+    await expect(page.locator("#verdict").getByRole("heading")).toHaveText("✗ Ditarik oleh pusat")
+    await axe(page)
+    await page.getByRole("combobox").first().selectOption("en")
+})
+
+test("a learner removes a record from the wallet; a centre backs up its key and restores it @desktop", async ({ page }) => {
+    await page.goto("/wallet")
+    const credential = await issueTo(page, (await page.locator("#walletCode").textContent())!, "Sewing, Level 2")
+    await page.goto(`/wallet#c=${credential}`)
+    await expect(page.getByText("Sewing, Level 2", { exact: true })).toBeVisible()
+    page.once("dialog", (d) => d.accept())
+    await page.getByRole("button", { name: "Remove: Sewing, Level 2" }).click()
+    await expect(page.getByText("Sewing, Level 2", { exact: true })).toHaveCount(0)
+
+    await page.goto("/issuer")
+    await page.getByLabel(/My own centre/).check()
+    await expect(page.locator("#recognition")).toHaveText(/^Not recognised/)
+    const key = (await page.locator(".mono").first().textContent())!
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Back up this centre's key" }).click()])
+    const file = await dl.path()
+    await page.evaluate(() => new Promise((r) => { const q = indexedDB.deleteDatabase("bekal"); q.onsuccess = q.onerror = q.onblocked = r }))
+    await page.reload()
+    await page.getByLabel(/My own centre/).check()
+    await expect(page.locator(".mono").first()).not.toHaveText(key) // a fresh key: the old one is gone from this browser
+    await page.locator("input[type=file][accept='application/json']").setInputFiles(file)
+    await expect(page.locator(".mono").first()).toHaveText(key)
 })

@@ -1,6 +1,6 @@
 // The two EAS schemas the registry uses (registered by scripts/setup.mjs, no resolver). Nothing about a learner is in
 // either: recognition is about a centre, and a revocation holds only the hash of a credential's random id.
-import { keccak256, toUtf8Bytes } from "ethers"
+import { dataSlice, getAddress, keccak256, toUtf8Bytes } from "ethers"
 
 export const SCHEMAS = {
     /** A recognised body vouches for a learning centre's key (recipient = the centre). Revocable: recognition can end. */
@@ -11,3 +11,6 @@ export const SCHEMAS = {
 
 /** What a revocation names: the hash of the record's random jti, which reveals nothing about the learner. */
 export const credentialId = (jti: string) => keccak256(toUtf8Bytes(`bekal:${jti}`))
+
+/** A withdrawal's recipient: the first 20 bytes of the record's id, so the withdrawal is one indexed log topic away. */
+export const revocationRecipient = (jti: string) => getAddress(dataSlice(credentialId(jti), 0, 20))

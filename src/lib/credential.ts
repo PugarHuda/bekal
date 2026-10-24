@@ -77,7 +77,7 @@ export type Verdict = {
     keyBinding: "valid" | "none" | "missing"
     achievement?: Learning
     learner?: Learner
-    hidden: string[] // learner claims the credential holds but the learner did not reveal
+    hidden: number // learner claims the credential holds but the learner did not reveal
     issuedAt?: number
     error?: string
 }
@@ -91,7 +91,7 @@ const jwtPart = (jwt: string, i: number) => JSON.parse(new TextDecoder().decode(
 
 export async function verify(presentation: string, registry: Registry, now = Date.now()): Promise<Verdict> {
     let issuer = ""
-    const fail = (error: string): Verdict => ({ ok: false, signature: false, issuer, recognition: { recognised: false, reason: "not checked" }, revoked: false, bound: false, keyBinding: "none", hidden: [], error })
+    const fail = (error: string): Verdict => ({ ok: false, signature: false, issuer, recognition: { recognised: false, reason: "not checked" }, revoked: false, bound: false, keyBinding: "none", hidden: 0, error })
     try {
         const parts = presentation.trim().split("~")
         const head = jwtPart(parts[0], 1)
@@ -121,7 +121,7 @@ export async function verify(presentation: string, registry: Registry, now = Dat
         return {
             ok: recognition.recognised && !rev.revoked,
             signature: true, issuer, recognition, revoked: rev.revoked, bound, keyBinding: bound ? "valid" : "none",
-            achievement: p.achievement, learner: p.learner, hidden: hidden ? [`${hidden} learner detail${hidden > 1 ? "s" : ""}`] : [],
+            achievement: p.achievement, learner: p.learner, hidden,
             issuedAt: p.iat
         }
     } catch (e) {

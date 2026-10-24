@@ -8,6 +8,8 @@
     import { addressOfJwk, fromB64u, newKey } from "../lib/crypto.ts"
     import { registry, revoke } from "../lib/registry.ts"
     import { get, keyFor, set } from "../lib/store.ts"
+    import { t } from "../lib/i18n.svelte.ts"
+    import Header from "../components/Header.svelte"
     import Qr from "../components/Qr.svelte"
     import Scan from "../components/Scan.svelte"
 
@@ -15,15 +17,16 @@
     let mode = $state<"demo" | "own">("demo")
     let key = $state(config.demoIssuer.privateKey)
     const address = $derived(new Wallet(key).address)
-    let recognition = $state("Checking the public registry…")
+    let centreName = $state(config.demoIssuer.name)
+    let recognition = $state("")
     let recognised = $state(false)
 
     let learning = $state<Learning>({ course: "", level: "", completedOn: new Date().toISOString().slice(0, 10), centreRef: "" })
     let hours = $state("")
-    let learner = $state<Learner & { birthYear?: number }>({ name: "" })
+    let learnerName = $state("")
     let birthYear = $state("")
     let holder = $state<{ jwk: object; address: string } | null>(null)
-    let out = $state<{ link: string; credential: string; bound: boolean } | null>(null)
+    let out = $state<{ link: string; credential: string; bound: boolean; learning: Learning } | null>(null)
     let issued = $state<Issued[]>([])
     let msg = $state("")
     let busy = $state(false)
@@ -33,7 +36,7 @@
     let loads = 0
     async function load() {
         const mine = ++loads
-        recognition = "Checking the public registry…"
+        recognition = t("iChecking")
         recognised = false
         const k = mode === "demo" ? config.demoIssuer.privateKey : await keyFor("issuerKey", newKey)
         if (mine !== loads) return
@@ -46,117 +49,149 @@
             const r = await registry.recognition(who)
             if (mine !== loads) return
             recognised = r.recognised
-            recognition = r.recognised ? `Recognised: ${r.name}, ${r.place}. Vouched for by ${r.by}.` : `Not recognised: ${r.reason}. Records from this key will verify as signed, but not as from a recognised centre.`
+            centreName = r.recognised ? r.name : who
+            recognition = r.recognised ? t("iRecognised", { name: r.name, place: r.place, by: r.by }) : t("iNotRecognised", { reason: t("vNoRecognition").replace(/^✗ /, "") })
         } catch (e) {
-            if (mine === loads) recognition = `The registry could not be read right now (${(e as Error).message}).`
+            if (mine === loads) recognition = t("iRegistryDown", { e: (e as Error).message })
         }
     }
     onMount(load)
 
     function walletCode(text: string) {
         try {
-            const t = text.trim().replace(/^.*bekal-wallet:/, "")
-            const jwk = JSON.parse(new TextDecoder().decode(fromB64u(t)))
+            const jwk = JSON.parse(new TextDecoder().decode(fromB64u(text.trim().replace(/^.*bekal-wallet:/, ""))))
             holder = { jwk, address: addressOfJwk(jwk) }
             msg = ""
         } catch {
-            msg = "That is not a Bekal wallet code. Ask the learner to open their wallet and show “My wallet code”."
+            msg = t("iBadCode")
         }
     }
 
     async function go(e: SubmitEvent) {
         e.preventDefault()
-        if (!learning.course.trim()) return void (msg = "Write what was learned.")
+        if (!learning.course.trim()) return void (msg = t("iWriteCourse"))
         busy = true
         try {
             const l: Learning = { course: learning.course.trim(), completedOn: learning.completedOn, ...(learning.level?.trim() ? { level: learning.level.trim() } : {}), ...(hours ? { hours: Number(hours) } : {}), ...(learning.centreRef?.trim() ? { centreRef: learning.centreRef.trim() } : {}) }
-            const who: Learner = { ...(learner.name?.trim() ? { name: learner.name.trim() } : {}), ...(birthYear ? { birthYear: Number(birthYear) } : {}) }
+            const who: Learner = { ...(learnerName.trim() ? { name: learnerName.trim() } : {}), ...(birthYear ? { birthYear: Number(birthYear) } : {}) }
             const { credential, jti } = await issue({ chainId: config.chainId, issuerKey: key, issuerAddress: address, learning: l, learner: who, holderJwk: holder?.jwk })
-            out = { credential, bound: !!holder, link: `${location.origin}/wallet#c=${credential}` }
+            out = { credential, bound: !!holder, link: `${location.origin}/wallet#c=${credential}`, learning: l }
             issued = [{ jti, course: l.course, on: l.completedOn, bound: !!holder }, ...issued]
             await set(`issued:${address}`, $state.snapshot(issued))
-            msg = holder ? "Issued, bound to the learner's wallet. Let them scan the code." : "Issued as a printed card: print it and give it to the learner."
-        } catch (e) {
-            msg = `Could not issue: ${(e as Error).message}`
+            msg = holder ? t("iIssuedBound") : t("iIssuedCard")
+        } catch (err) {
+            msg = t("iCouldNot", { e: (err as Error).message })
         } finally {
             busy = false
         }
     }
 
     async function withdraw(x: Issued) {
-        if (!confirm(`Revoke “${x.course}”? This is permanent and public.`)) return
+        if (!confirm(t("iRevokeAsk", { x: x.course }))) return
         busy = true
-        msg = "Writing the revocation to the registry…"
+        msg = t("iRevoking")
         try {
             const tx = await revoke(key, x.jti)
             issued = issued.map((y) => (y.jti === x.jti ? { ...y, revokedTx: tx } : y))
             await set(`issued:${address}`, $state.snapshot(issued))
-            msg = "Revoked. Verifiers will see it within about a minute, once the registry's index has caught up."
-        } catch (e) {
-            msg = `Could not revoke: ${(e as Error).message}`
+            msg = t("iRevokedMsg")
+        } catch (err) {
+            msg = t("iCouldNot", { e: (err as Error).message })
         } finally {
             busy = false
         }
     }
+
+    // A centre's own key and its list of issued records, to a file: without the key it cannot withdraw its records.
+    async function backupKey() {
+        const blob = new Blob([JSON.stringify({ bekalCentre: 1, key, issued: $state.snapshot(issued) })], { type: "application/json" })
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `bekal-centre-${address.slice(0, 8)}.json` })
+        a.click()
+        URL.revokeObjectURL(a.href)
+    }
+    async function restoreKey(e: Event) {
+        const f = (e.target as HTMLInputElement).files?.[0]
+        if (!f) return
+        try {
+            const j = JSON.parse(await f.text())
+            if (j.bekalCentre !== 1 || !/^0x[0-9a-fA-F]{64}$/.test(j.key)) throw new Error("not a Bekal centre key file")
+            await set("issuerKey", j.key)
+            await set(`issued:${new Wallet(j.key).address}`, j.issued ?? [])
+            mode = "own"
+            await load()
+        } catch (err) {
+            msg = t("iCouldNot", { e: (err as Error).message })
+        }
+    }
 </script>
 
-<header class="top noprint"><a class="brand" href="/"><img src="/logo.svg" alt="" width="28" height="28" />BEKAL</a><nav><a href="/issuer" aria-current="page">Centre</a><a href="/wallet">Wallet</a><a href="/verify">Verify</a></nav></header>
+<Header page="issuer" />
 <main>
-    <h1 class="noprint">Issue a learning record</h1>
-    <p class="lead noprint">For learning centres. The record is signed in this browser and handed to the learner; nothing about the learner is sent anywhere or written to a blockchain.</p>
+    <h1 class="noprint">{t("iTitle")}</h1>
+    <p class="lead noprint">{t("iLead")}</p>
 
     <section class="card noprint" aria-labelledby="centreH">
-        <h2 id="centreH">Your centre</h2>
+        <h2 id="centreH">{t("iCentre")}</h2>
         <label class="check"><input type="radio" name="mode" value="demo" bind:group={mode} onchange={load} />{config.demoIssuer.name}</label>
-        <label class="check"><input type="radio" name="mode" value="own" bind:group={mode} onchange={load} />My own centre (a new key, kept in this browser)</label>
-        <p class="mono">Key: {address}</p>
+        <label class="check"><input type="radio" name="mode" value="own" bind:group={mode} onchange={load} />{t("iOwn")}</label>
+        <p class="mono">{t("iKey")}: {address}</p>
         <p role="status" class={recognised ? "ok" : "fine"} id="recognition">{recognition}</p>
-        {#if mode === "demo"}<p class="fine">{config.demoIssuer.note}</p>{:else}<p class="fine">In a pilot, a recognised body (for example UNHCR's list of recognised learning centres, or an NGO consortium) vouches for this key on the registry.</p>{/if}
+        {#if mode === "demo"}<p class="fine">{config.demoIssuer.note}</p>{:else}
+            <p class="fine">{t("iPilotNote")}</p>
+            <p class="fine">{t("iKeyBackupNote")}</p>
+            <div class="actions"><button type="button" class="ghost" onclick={backupKey}>{t("iKeyBackup")}</button><label class="btn ghost" style="margin:0">{t("iKeyRestore")}<input type="file" accept="application/json" onchange={restoreKey} hidden /></label></div>
+        {/if}
     </section>
 
     <form class="card noprint" onsubmit={go} aria-labelledby="recH">
-        <h2 id="recH">The record</h2>
-        <label for="course">What was learned</label>
-        <input id="course" bind:value={learning.course} placeholder="e.g. Mathematics, Grade 6" required />
+        <h2 id="recH">{t("iRecord")}</h2>
+        <label for="course">{t("iCourse")}</label>
+        <input id="course" bind:value={learning.course} placeholder={t("iCoursePh")} required />
         <div class="row">
-            <div><label for="level">Level or result</label><input id="level" bind:value={learning.level} placeholder="e.g. Completed, B1" /></div>
-            <div><label for="hours">Hours</label><input id="hours" type="number" min="1" bind:value={hours} /></div>
-            <div><label for="done">Completed on</label><input id="done" type="date" bind:value={learning.completedOn} required /></div>
-            <div><label for="ref">Centre's record number</label><input id="ref" bind:value={learning.centreRef} placeholder="optional" /></div>
+            <div><label for="level">{t("iLevel")}</label><input id="level" bind:value={learning.level} placeholder={t("iLevelPh")} /></div>
+            <div><label for="hours">{t("iHours")}</label><input id="hours" type="number" min="1" bind:value={hours} /></div>
+            <div><label for="done">{t("iDone")}</label><input id="done" type="date" bind:value={learning.completedOn} required /></div>
+            <div><label for="ref">{t("iRef")}</label><input id="ref" bind:value={learning.centreRef} placeholder={t("iOptional")} /></div>
         </div>
-        <h2 style="margin-top:18px">The learner (optional, hidden unless they choose to show it)</h2>
+        <h2 style="margin-top:18px">{t("iLearner")}</h2>
         <div class="row">
-            <div><label for="name">Name</label><input id="name" bind:value={learner.name} autocomplete="off" /></div>
-            <div><label for="by">Birth year</label><input id="by" type="number" min="1900" max="2100" bind:value={birthYear} /></div>
+            <div><label for="name">{t("iName")}</label><input id="name" bind:value={learnerName} autocomplete="off" /></div>
+            <div><label for="by">{t("iBirth")}</label><input id="by" type="number" min="1900" max="2100" bind:value={birthYear} /></div>
         </div>
-        <h2 style="margin-top:18px">Give it to</h2>
+        <h2 style="margin-top:18px">{t("iGiveTo")}</h2>
         {#if holder}
-            <p class="ok">The learner's wallet <span class="mono">{holder.address}</span>: only that wallet can show this record. <button type="button" class="ghost" onclick={() => (holder = null)}>Use a printed card instead</button></p>
+            <p class="ok" style="overflow-wrap:anywhere">{t("iBound", { a: holder.address })} <button type="button" class="ghost" onclick={() => (holder = null)}>{t("iUseCard")}</button></p>
         {:else}
-            <p class="fine">Without a wallet code, the record is a printed card anyone holding it can show, like paper.</p>
-            <Scan label="Learner's wallet code" found={walletCode} />
+            <p class="fine">{t("iCardNote")}</p>
+            <Scan label={t("iWalletCode")} found={walletCode} />
         {/if}
-        <div class="actions"><button type="submit" disabled={busy}>Sign and issue</button></div>
+        <div class="actions"><button type="submit" disabled={busy}>{t("iSign")}</button></div>
         <p class="msg" role="status">{msg}</p>
     </form>
 
     {#if out}
         <section class="card" aria-labelledby="outH">
-            <h2 id="outH">{out.bound ? "Let the learner scan this" : "Printed card"}</h2>
-            <Qr text={out.link} label="Learning record QR code" />
-            <p class="fine">{out.bound ? "Scanning it with the learner's phone opens their wallet and saves the record." : "Scanning it opens a Bekal wallet and saves the record there; keep the paper safe as a backup."}</p>
-            <div class="actions noprint"><button type="button" onclick={() => print()}>Print</button><button type="button" class="ghost" onclick={() => navigator.clipboard?.writeText(out!.link)}>Copy link</button></div>
-            <details class="noprint"><summary>The signed record (SD-JWT VC)</summary><p class="mono" id="credential">{out.credential}</p></details>
+            <h2 id="outH">{out.bound ? t("iScanThis") : t("iCardTitle")}</h2>
+            <Qr text={out.link} label={t("recordQr")} />
+            <!-- What a person reads on the printed card; the QR is what a machine checks, so the card says nothing it does not sign. -->
+            <div class="cardtext" id="cardText">
+                <b>{out.learning.course}</b>{#if out.learning.level}{" · "}{out.learning.level}{/if}<br />
+                {t("cardCompleted")} {out.learning.completedOn}{#if out.learning.hours}{" · "}{t("vHours", { n: out.learning.hours })}{/if}<br />
+                {t("cardFrom")} {centreName}
+            </div>
+            <p class="fine noprint">{out.bound ? t("iBoundHint") : t("iCardHint")}</p>
+            <div class="actions noprint"><button type="button" onclick={() => print()}>{t("iPrint")}</button><button type="button" class="ghost" onclick={() => navigator.clipboard?.writeText(out!.link)}>{t("wCopy")}</button></div>
+            <details class="noprint"><summary>{t("iSigned")}</summary><p class="mono" id="credential">{out.credential}</p></details>
         </section>
     {/if}
 
     {#if issued.length}
         <section class="card noprint" aria-labelledby="listH">
-            <h2 id="listH">Issued from this key</h2>
+            <h2 id="listH">{t("iIssuedList")}</h2>
             <ul class="list">
                 {#each issued as x (x.jti)}
-                    <li><span>{x.course} · {x.on} · {x.bound ? "wallet" : "card"}</span>
-                        {#if x.revokedTx}<span class="bad">Revoked</span>{:else}<button type="button" class="ghost" disabled={busy} onclick={() => withdraw(x)}>Revoke</button>{/if}</li>
+                    <li><span>{x.course} · {x.on} · {x.bound ? t("iWallet") : t("iCard")}</span>
+                        {#if x.revokedTx}<span class="bad">{t("iRevoked")}</span>{:else}<button type="button" class="ghost" disabled={busy} onclick={() => withdraw(x)}>{t("iRevoke")}</button>{/if}</li>
                 {/each}
             </ul>
         </section>

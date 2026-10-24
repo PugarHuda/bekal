@@ -13,7 +13,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { ethers } from "ethers"
 import { issue, present } from "../src/lib/credential.ts"
-import { SCHEMAS, credentialId } from "../src/lib/schemas.ts"
+import { SCHEMAS, credentialId, revocationRecipient } from "../src/lib/schemas.ts"
 
 const ROOT = path.join(import.meta.dirname, "..")
 try { process.loadEnvFile(path.join(ROOT, ".env")) } catch {}
@@ -80,6 +80,8 @@ const write = () => fs.writeFileSync(cfgFile, JSON.stringify({
     chainId: CHAIN,
     network: "Base Sepolia",
     rpcs: ["https://base-sepolia-rpc.publicnode.com", "https://base-sepolia.gateway.tenderly.co", "https://sepolia.base.org"],
+    logRpcs: ["https://base-sepolia.gateway.tenderly.co"], // serves eth_getLogs over the registry's whole life in one call
+    fromBlock: config.fromBlock ?? 49075000, // just before the schemas were registered
     eas: EAS,
     graphql: "https://base-sepolia.easscan.org/graphql",
     explorer: "https://base-sepolia.easscan.org",
@@ -93,7 +95,7 @@ write()
 const fixture = path.join(ROOT, "test/fixtures/revoked.txt")
 if (!fs.existsSync(fixture)) {
     const { credential, jti } = await issue({ chainId: CHAIN, issuerKey: demo.privateKey, issuerAddress: demo.address, learning: { course: "English, Level 2 (issued in error)", completedOn: "2026-09-30" }, learner: { name: "Test Learner" } })
-    const r = await attest(demo, SCHEMAS.revocation, ethers.ZeroAddress, ["bytes32"], [credentialId(jti)], false)
+    const r = await attest(demo, SCHEMAS.revocation, revocationRecipient(jti), ["bytes32"], [credentialId(jti)], false)
     fs.mkdirSync(path.dirname(fixture), { recursive: true })
     fs.writeFileSync(fixture, await present({ chainId: CHAIN, credential, reveal: { name: true } }))
     console.log(`revoked fixture ${jti}: ${r.uid}`)
